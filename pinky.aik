@@ -1,0 +1,39 @@
+;pattern for op2 reg instructions
+.OP .CC .Rd, .Rn := .this:5 .CC:2 reg:1 .Rd:4 .Rn:4
+
+;pattern for op2 big_immed
+.OP .CC .Rd, #.C ?(.C > 7 || .C < -8) := 3:2 .CC:2 (.C >> 4):12 .this:5 .CC:2 not_reg:1 .Rd:4 .C:4
+
+;pattern for op2 reg_immed
+.OP .CC .Rd, #.C := .this:5 .CC:2 not_reg:1 .Rd:4 .C:4
+
+;pattern for LDR/STR op2 reg instructions
+.OP .CC .Rd, [.Rn] := .this:5 .CC:2 reg:1 .Rd:4 .Rn:4
+
+;pattern for LDR/STR  op2 big_immed
+.OP .CC .Rd, [#.C] ?(.C > 7 || .C < -8) := 3:2 .CC:2 (.C >> 4):12 .this:5 .CC:2 not_reg:1 .Rd:4 .C:4
+
+;pattern for LDR/STR  op2 reg_immed
+.OP .CC .Rd, [#.C] := .this:5 .CC:2 not_reg:1 .Rd:4 .C:4
+
+;pattern for SYS
+.OP .CC := .this:5 .CC:2 0:9
+
+;pattern for PRE
+PRE .CC #.C := 3:2 .CC:2 .C:12
+
+
+.alias .OP {ADD ADDF AND BIC EOR FTOI ITOF LDR MOV MUL MULF NEG ORR RECF SHA STR SLT SUB SUBF SYS}
+.alias .CC {AL S EQ NE}
+.alias .not_reg 0 not_reg 
+.alias .reg 1 reg
+
+;from AIK ref section 1.5
+;.segment name width depth baseaddress format
+.segment .text 0x10 0x10000 0x0 .VMEM
+.segment .data 0x10 0x10000 0x0 .VMEM
+
+.const {r0	r1	r2	r3	r4	r5	r6	r7 r8 r9	r10	r11	r12	r13	r14	r15
+	13	sp	14	lr	15	pc}
+.const 0 .lowfirst
+
