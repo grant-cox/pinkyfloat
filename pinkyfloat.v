@@ -61,9 +61,9 @@ module processor(halt, reset, clk);
         PC_in0=0;
         PREval=0;
         PREflag=0;
-        $readmemh0(instrmem);          
-        $readmemh1(regfile);               
-        $readmemh2(datamem);        
+        $readmemh("instruction.mem", instrmem);          
+        $readmemh("regfile.mem", regfile);               
+        //$readmemh2(datamem);        
     end
     
         reg `WORD ir_in0, ir_in1, ir_in2, ir_in3, ir_inSaved;
@@ -221,8 +221,8 @@ reg clk = 0;
 wire halted;
 processor PE(halted,reset,clk);
 initial begin
-    $dumpfile;                                
-    $dumpvars(0,PE);                    
+    $dumpfile("pfloat.vcp");                                
+    //$dumpvars(0, PE );                    
     $dumpvars(0, PE, PE.regfile[0],PE.regfile[1],PE.regfile[2], PE.regfile[3]);      
     #10 reset = 1;
     #10 reset = 0;

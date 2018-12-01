@@ -1,0 +1,227 @@
+$date
+	Fri Nov 30 19:02:13 2018
+$end
+$version
+	Icarus Verilog
+$end
+$timescale
+	1s
+$end
+$scope module testbench $end
+$scope module PE $end
+$var wire 1 ! clk $end
+$var wire 1 " reset $end
+$var reg 16 # PC_in0 [15:0] $end
+$var reg 16 $ PC_in1 [15:0] $end
+$var reg 16 % PC_in2 [15:0] $end
+$var reg 16 & PC_in3 [15:0] $end
+$var reg 1 ' PREflag $end
+$var reg 12 ( PREval [11:0] $end
+$var reg 1 ) Zflag $end
+$var reg 1 * frz $end
+$var reg 1 + halt $end
+$var reg 1 , init $end
+$var reg 16 - ir_in0 [15:0] $end
+$var reg 16 . ir_in2 [15:0] $end
+$var reg 16 / ir_in3 [15:0] $end
+$var reg 16 0 op1 [15:0] $end
+$var reg 16 1 op2 [15:0] $end
+$var reg 16 2 outputVal [15:0] $end
+$var reg 1 3 regWrite $end
+$upscope $end
+$upscope $end
+$scope module testbench $end
+$scope module PE $end
+$var reg 16 4 \regfile[0] [15:0] $end
+$upscope $end
+$upscope $end
+$scope module testbench $end
+$scope module PE $end
+$var reg 16 5 \regfile[1] [15:0] $end
+$upscope $end
+$upscope $end
+$scope module testbench $end
+$scope module PE $end
+$var reg 16 6 \regfile[2] [15:0] $end
+$upscope $end
+$upscope $end
+$scope module testbench $end
+$scope module PE $end
+$var reg 16 7 \regfile[3] [15:0] $end
+$upscope $end
+$upscope $end
+$enddefinitions $end
+#0
+$dumpvars
+b0 7
+b0 6
+b0 5
+b0 4
+x3
+bx 2
+bx 1
+bx 0
+bx /
+bx .
+bx -
+1,
+0+
+0*
+0)
+b0 (
+0'
+bx &
+bx %
+bx $
+b0 #
+0"
+0!
+$end
+#10
+b0 7
+b0 6
+b0 5
+b0 4
+1"
+#20
+b0 7
+b0 6
+b0 5
+b0 4
+0"
+#30
+b0 $
+b1 #
+1!
+#40
+0!
+#50
+b0 %
+b101 .
+b1 $
+b10 #
+1!
+#60
+0!
+#70
+b10 $
+b11 #
+1*
+b1xxxxxxxxxxxxxxx .
+b0 &
+b101 /
+b101 1
+b0 0
+1!
+#80
+0!
+#90
+b1xxxxxxxxxxxxxxx /
+bx 1
+bx 0
+b101 -
+0,
+13
+b101 2
+1!
+#100
+0!
+#110
+b1xxxxxxxxxxxxxxx -
+b101 4
+1!
+#120
+0!
+#130
+b10 %
+b100 .
+0*
+1!
+#140
+0!
+#150
+b11 $
+b100 #
+1*
+b1xxxxxxxxxxxxxxx .
+b10 &
+b100 /
+b100 1
+b101 0
+1!
+#160
+0!
+#170
+b1xxxxxxxxxxxxxxx /
+bx 1
+bx 0
+b100 -
+b1001 2
+1!
+#180
+0!
+#190
+b1xxxxxxxxxxxxxxx -
+b1001 4
+1!
+#200
+0!
+#210
+b11 %
+b11 .
+0*
+1!
+#220
+0!
+#230
+b100 $
+b101 #
+1*
+b1xxxxxxxxxxxxxxx .
+b11 &
+b11 /
+b11 1
+b1001 0
+1!
+#240
+0!
+#250
+b1xxxxxxxxxxxxxxx /
+bx 1
+bx 0
+b11 -
+b1100 2
+1!
+#260
+0!
+#270
+b1xxxxxxxxxxxxxxx -
+b1100 4
+1!
+#280
+0!
+#290
+b100 %
+b1010100000000000 .
+0*
+1!
+#300
+0!
+#310
+b101 $
+b110 #
+b100 &
+b1010100000000000 /
+b0 1
+b1100 0
+1!
+#320
+0!
+#330
+b110 $
+b111 #
+b1010100000000000 -
+1+
+1!
+#340
+0!
