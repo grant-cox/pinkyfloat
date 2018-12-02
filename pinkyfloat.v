@@ -39,10 +39,23 @@
 //NOP instruction
 `define NOP 16'b1xxxxxxxxxxxxxxx
 
+//Floating point definition (syntax)
+`define BIAS 8'b10000110 //exponent exp = E - bias - 7, so total BIAS = 134
+`define SIGN [15] //1 bit leading sign
+`define EXP [14:7] //8 bit exponent
+`define MANT [6:0] //7 bit mantissa (implied leading 1.mantissa)
+
 //floating point unit
 module fpu;
     input `WORD op1, `WORD op2, [5:0] instr;
     output `WORD result;
+    //ftoi
+    //itof
+
+    //mulf
+    //recf
+    //subf
+    //addf
 endmodule
 
 
@@ -87,6 +100,7 @@ Stage 0 (owns PC)
 */
     always @(posedge clk) begin
       //writing to the register
+      //condition: processor not being initialized, regWrite = 1, in_in0 is not jump
       if ((!init) && regWrite && !(ir_in0 `Dest == 4'b1111)) regfile[ir_in0 `Dest] = outputVal;
 
       //setting the Z-flag
