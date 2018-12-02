@@ -73,6 +73,7 @@ module processor(halt, reset, clk);
     reg `PRESIZE PREval; //contains the PRE value, if there is one
     reg regWrite; //control mux
 
+    reg [127:0][7:0] reciprocal_lookup;
     always @(reset) begin
         halt = 0;
         init = 1;
@@ -84,6 +85,7 @@ module processor(halt, reset, clk);
         $readmemh("instruction.mem", instrmem);          
         $readmemh("regfile.mem", regfile);               
         //$readmemh2(datamem);        
+        $readmemh("reciprocal_look.mem", reciprocal_lookup);
     end
     
         reg `WORD ir_in0, ir_in1, ir_in2, ir_in3, ir_inSaved;
