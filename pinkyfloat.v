@@ -39,6 +39,13 @@
 //NOP instruction
 `define NOP 16'b1xxxxxxxxxxxxxxx
 
+//floating point unit
+module fpu;
+    input `WORD op1, `WORD op2, [5:0] instr;
+    output `WORD result;
+endmodule
+
+
 module processor(halt, reset, clk);
     output reg halt;
     input reset, clk;
