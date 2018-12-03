@@ -18,6 +18,10 @@
 `define isReg [8]
 `define Dest  [7:4]
 `define Op2 [3:0]
+`define PCWRITE 4'b1111
+//defines the instruction fetch operation depending on the value of frz
+//frz = 1 when the stage is frozen (register interlock), = 0 when normal operation
+`define FRZ_DEP_INSTR instrmem[PC_in1-frz]
 
 //OPcodes w/ matching State #s
 `define OPadd 5'b00000
@@ -33,8 +37,14 @@
 `define OPstr 5'b01111
 `define OPslt 5'b10000
 `define OPsub 5'b10001
-`define OPsys 5'b10011
-`define OPpre 2'b11
+`define OPitof 5'b10010
+`define OPftoi 5'b10011
+`define OPrecf 5'b10100
+`define OPmulf 5'b10101
+`define OPsubf 5'b10110
+`define OPaddf 5'b10111
+`define OPsys 5'b11111
+`define OPpre 5'b11000
 
 //NOP instruction
 `define NOP 16'b1xxxxxxxxxxxxxxx
@@ -46,16 +56,41 @@
 `define MANT [6:0] //7 bit mantissa (implied leading 1.mantissa)
 
 //floating point unit
-module fpu;
-    input `WORD op1, `WORD op2, [5:0] instr;
-    output `WORD result;
-    //ftoi
-    //itof
-
-    //mulf
-    //recf
-    //subf
-    //addf
+//reg done : 1 when the floating point operation has completed
+//reg done : 0 when the floating point operation is currently running
+module fpu(input en, input clk, input `WORD op1, input `WORD op2, input [5:0] instr, output reg `WORD result, output reg done);
+    // Sign = ((i & 0x8000) ? 1 : 0);
+    // Exp = ((i >> 7) & 0xff);
+    // Frac = ((i & 0x7f) + (f16 ? 0x80 : 0));
+    // if int = 0x0000 then the fraction becomes 0, otherwise normalize with 0x80
+    //reg sign;
+    //reg [7:0] exp;
+    //reg [6:0] frac;
+    always @(posedge clk) begin
+        if (en) begin
+            done <= 0; //operation is currently running
+            case (instr)
+                `OPitof: begin
+                    if(op2) begin           //if op2 ain't 0 
+                        result[15] <= ((op2 & 4'h8000) ? 1 : 0); //sign is based on top bit of integer representation
+                        result[14:7] <= ((op2 >> 7) & 2'hFF); //exponent of float is 
+                        result[6:0] <= op2 & 2'h7f + 2'h80; //((i & 0x7f) + (f16 ? 0x80 : 0));
+                        done <= 1;
+                    end else begin          //if we's a dummy and try to convert 0 to float 
+                        result <= 0;
+                        done <= 1;
+                    end
+                end
+                `OPftoi: begin end
+                `OPmulf: begin end
+                `OPrecf: begin end
+                `OPsubf: begin end
+                `OPaddf: begin end
+    
+                default: begin end
+            endcase 
+        end
+    end
 endmodule
 
 
@@ -66,6 +101,7 @@ module processor(halt, reset, clk);
     reg `WORD regfile `REGSIZE;
     reg `WORD datamem `MEMSIZE;        //instantiate data memory
     reg `WORD instrmem `MEMSIZE;    //instantiate instruction memory
+    reg [7:0] reciprocal_lookup [127:0];
     reg init;
     reg frz;
     reg Zflag;
@@ -73,7 +109,6 @@ module processor(halt, reset, clk);
     reg `PRESIZE PREval; //contains the PRE value, if there is one
     reg regWrite; //control mux
 
-    reg [127:0][7:0] reciprocal_lookup;
     always @(reset) begin
         halt = 0;
         init = 1;
@@ -88,7 +123,7 @@ module processor(halt, reset, clk);
         $readmemh("reciprocal_look.mem", reciprocal_lookup);
     end
     
-        reg `WORD ir_in0, ir_in1, ir_in2, ir_in3, ir_inSaved;
+        reg `WORD ir_in0, ir_in1, ir_in2, ir_in3;
         reg `WORD PC_in0, PC_in1, PC_in2, PC_in3;
         reg `WORD outputVal; //output from the ALU or MEM
         reg `WORD op1, op2;
@@ -103,17 +138,17 @@ Stage 0 (owns PC)
     always @(posedge clk) begin
       //writing to the register
       //condition: processor not being initialized, regWrite = 1, in_in0 is not jump
-      if ((!init) && regWrite && !(ir_in0 `Dest == 4'b1111)) regfile[ir_in0 `Dest] = outputVal;
+      if ((!init) && regWrite && !(ir_in0 `Dest == `PCWRITE)) regfile[ir_in0 `Dest] = outputVal;
 
       //setting the Z-flag
-      if ((ir_in0 `CC == `S) && (ir_in0[15:14]!=2'b11) && (!init)) Zflag = !outputVal;
+      if ((ir_in0 `CC == `S) && (ir_in0[15:12]!=`OPpre) && (!init)) Zflag = !outputVal;
 
-      if(ir_in0 `Dest == 4'b1111) begin //processing JUMPS
+      if(ir_in0 `Dest == `PCWRITE) begin //processing JUMPS
           PC_in0 <= outputVal+1;
           PC_in1 <= outputVal;
           regfile[15] <=outputVal;
           frz<=0;
-      end else if(!frz) begin    //processing regular instructions that aren�t jumps
+      end else if(!frz) begin    //processing regular instructions that aren't jumps
           PC_in0 <= PC_in0 + 1;
           PC_in1 <= PC_in0;
           if(PC_in3===16'bxxxxxxxxxxxxxxxx) begin
@@ -135,33 +170,33 @@ Stage 1
     always @(posedge clk) begin
   
       //These are the dependencies we check for. If there is a dependency, we send NOPs until it is resolved.
-      if (instrmem[PC_in1-frz][15:14] == 2'b11) begin
-          PREval<=instrmem[PC_in1-frz][11:0];
+      if (`FRZ_DEP_INSTR[15:12] == `OPpre) begin
+          PREval<=`FRZ_DEP_INSTR[11:0];
            frz <= 0; 
-           if( !((instrmem[PC_in1-frz] `CC == `EQ && Zflag==0) || (instrmem[PC_in1-frz] `CC == `NE && Zflag==1))) begin
-              ir_in2 <= instrmem[PC_in1-frz];
+           if( !((`FRZ_DEP_INSTR `CC == `EQ && Zflag==0) || (`FRZ_DEP_INSTR `CC == `NE && Zflag==1))) begin
+              ir_in2 <= `FRZ_DEP_INSTR;
               PC_in2 <= PC_in1;
            end
-      end else if ((ir_in3 `Dest == 4'b1111) ||
-          (ir_in2 `Dest == 4'b1111) || 
-          (ir_in0 `Dest == 4'b1111) || 
-          ((instrmem[PC_in1-frz] `isReg) && (instrmem[PC_in1-frz] `Op2 == ir_in3 `Dest)) || 
-          ((instrmem[PC_in1-frz] `isReg) && (instrmem[PC_in1-frz] `Op2 == ir_in2 `Dest)) || 
-          ((instrmem[PC_in1-frz] `isReg) && (instrmem[PC_in1-frz] `Op2 == ir_in0 `Dest)) ||  
-          (instrmem[PC_in1-frz] `Dest == ir_in3 `Dest) ||
-          (instrmem[PC_in1-frz] `Dest == ir_in2 `Dest) ||
-          (instrmem[PC_in1-frz] `Dest == ir_in0 `Dest) ||
+      end else if ((ir_in3 `Dest == `PCWRITE) ||
+          (ir_in2 `Dest == `PCWRITE) || 
+          (ir_in0 `Dest == `PCWRITE) || 
+          ((`FRZ_DEP_INSTR `isReg) && (`FRZ_DEP_INSTR `Op2 == ir_in3 `Dest)) || 
+          ((`FRZ_DEP_INSTR `isReg) && (`FRZ_DEP_INSTR `Op2 == ir_in2 `Dest)) || 
+          ((`FRZ_DEP_INSTR `isReg) && (`FRZ_DEP_INSTR `Op2 == ir_in0 `Dest)) ||  
+          (`FRZ_DEP_INSTR `Dest == ir_in3 `Dest) ||
+          (`FRZ_DEP_INSTR `Dest == ir_in2 `Dest) ||
+          (`FRZ_DEP_INSTR `Dest == ir_in0 `Dest) ||
           (ir_in0 `CC == `S) || (ir_in2 `CC == `S) || (ir_in3 `CC == `S) ||
-          ((instrmem[PC_in1-frz] == `OPldr) && ((ir_in0 `Opcode  == `OPstr) || (ir_in2 `Opcode  == `OPstr) || (ir_in3 `Opcode  == `OPstr))) ||
-          ((instrmem[PC_in1-frz] == `OPstr) && ((ir_in0 `Opcode  == `OPldr) || (ir_in2 `Opcode  == `OPldr) || (ir_in3 `Opcode  == `OPldr)))) begin
+          ((`FRZ_DEP_INSTR == `OPldr) && ((ir_in0 `Opcode  == `OPstr) || (ir_in2 `Opcode  == `OPstr) || (ir_in3 `Opcode  == `OPstr))) ||
+          ((`FRZ_DEP_INSTR == `OPstr) && ((ir_in0 `Opcode  == `OPldr) || (ir_in2 `Opcode  == `OPldr) || (ir_in3 `Opcode  == `OPldr)))) begin
           ir_in2 <= `NOP;
           frz <= 1; 
       end else begin 
          
           frz <= 0; 
 
-          if( !((instrmem[PC_in1-frz] `CC == `EQ && Zflag==0) || (instrmem[PC_in1-frz] `CC == `NE && Zflag==1))) begin
-              ir_in2 <= instrmem[PC_in1-frz];
+          if( !((`FRZ_DEP_INSTR `CC == `EQ && Zflag==0) || (`FRZ_DEP_INSTR `CC == `NE && Zflag==1))) begin
+              ir_in2 <= `FRZ_DEP_INSTR;
               PC_in2 <= PC_in1;
           end
 
@@ -176,7 +211,7 @@ Stage 2
 */
   always @(posedge clk) begin
 
-       if(ir_in2[15:14] ==`OPpre) PREflag<=1;
+       if(ir_in2[15:12] ==`OPpre) PREflag<=1;
 
        op1 <= regfile[ir_in2 `Dest];
 
@@ -216,6 +251,7 @@ Stage 3
         `OPsha: begin outputVal<=((op2>0) ? (op1 << op2) : (op1 >> -1*op2)); regWrite<=1; end
         `OPstr: begin datamem[op2] <= regfile[ir_in3 `Dest]; regWrite<=0; end
         `OPldr: begin outputVal<=datamem[op2]; regWrite<=1; end
+        `OPitof: begin end //add FPU module instantiation
         default: begin halt<=1; end
     endcase
     end       
