@@ -49,6 +49,22 @@
 //NOP instruction
 `define NOP 16'b1xxxxxxxxxxxxxxx
 
+module lead0s(d, s);
+    output reg[4:0] d; input wire[15:0] s;
+    reg[7:0] s8; reg[3:0] s4; reg[1:0] s2;
+    always @(*) begin
+        if (s[15:0] == 0) d = 16; 
+        else begin
+        d[4] = 0;
+        {d[3],s8} = ((|s[15:8]) ? {1'b0,s[15:8]} : {1'b1,s[7:0]});
+        {d[2],s4} = ((|s8[7:4]) ? {1'b0,s8[7:4]} : {1'b1,s8[3:0]});
+        {d[1],s2} = ((|s4[3:2]) ? {1'b0,s4[3:2]} : {1'b1,s4[1:0]});
+        d[0] = !s2[1];
+        end
+    end
+endmodule
+
+
 //Floating point definition (syntax)
 `define BIAS 8'b10000110 //exponent exp = E - bias - 7, so total BIAS = 134
 `define SIGN [15] //1 bit leading sign
