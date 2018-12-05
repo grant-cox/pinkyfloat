@@ -1,3 +1,3 @@
 #!/bin/bash
-iverilog pinkyfloat.v
+iverilog dietzimp.v
 ./a.out

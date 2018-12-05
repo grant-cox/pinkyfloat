@@ -267,7 +267,7 @@ Stage 2
 */
     always @(posedge clk) begin
         if(fpu_done && !fpu_en) begin
-            if(ir_in2[15:12] ==`OPpre) PREflag<=1;
+            if(ir_in2[15:11] ==`OPpre) PREflag<=1;
 
             op1 <= regfile[ir_in2 `Dest];
 
@@ -295,7 +295,7 @@ Stage 3
   always @(posedge clk) begin
     if(fpu_done && !fpu_en) begin
         //this case statement begins after we ensure we've made it to to the first instruction or else it halts prematurely
-        if(ir_in3 === 16'bxxxxxxxxxxxxxxxx || ir_in3 === 16'b1xxxxxxxxxxxxxxx || ir_in3 [15:14] == `OPpre) begin #0; end 
+        if(ir_in3 === 16'bxxxxxxxxxxxxxxxx || ir_in3 === 16'b1xxxxxxxxxxxxxxx || ir_in3 [15:11] == `OPpre) begin #0; end 
         //the default needs to be halt instead of #1 so that it doesn't run infinitely
         else begin case (ir_in3 `Opcode) 
             `OPadd: begin outputVal<=op1+op2; regWrite<=1; end
