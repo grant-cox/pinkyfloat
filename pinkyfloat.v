@@ -71,6 +71,12 @@ endmodule
 `define EXP [14:7] //8 bit exponent
 `define MANT [6:0] //7 bit mantissa (implied leading 1.mantissa)
 
+
+`define FPU_START 50
+`define FPU_ITOF_S2 51
+`define FPU_ITOF_S3 52
+
+
 //floating point unit
 //reg done : 1 when the floating point operation has completed
 //reg done : 0 when the floating point operation is currently running
@@ -78,33 +84,53 @@ module fpu(input en, input clk, input `WORD op1, input `WORD op2, input [5:0] in
     // Sign = ((i & 0x8000) ? 1 : 0);
     // Exp = ((i >> 7) & 0xff);
     // Frac = ((i & 0x7f) + (f16 ? 0x80 : 0));
-    // if int = 0x0000 then the fraction becomes 0, otherwise normalize with 0x80
-    //reg sign;
-    //reg [7:0] exp;
-    //reg [6:0] frac;
+    // if int = 0x0000 then the fraction becomes 0, otherwise normalize with 0x80'
+    integer state = `FPU_START;
+    integer tmp;
+    reg sign;
+    reg [7:0] exp;
+    reg [6:0] frac;
+    reg `WORD int;
+    wire [4:0] d;
+    lead0s lead0(.d(d), .s(int));
     always @(posedge clk) begin
         if (en) begin
             done <= 0; //operation is currently running
-            case (instr)
-                `OPitof: begin
-                    if(op2) begin           //if op2 ain't 0 
-                        result[15] <= ((op2 & 4'h8000) ? 1 : 0); //sign is based on top bit of integer representation
-                        result[14:7] <= ((op2 >> 7) & 2'hFF); //exponent of float is 
-                        result[6:0] <= op2 & 2'h7f + 2'h80; //((i & 0x7f) + (f16 ? 0x80 : 0));
-                        done <= 1;
-                    end else begin          //if we's a dummy and try to convert 0 to float 
-                        result <= 0;
-                        done <= 1;
-                    end
+            case(state)
+                `FPU_START: begin
+                    case (instr)
+                        `OPitof: begin
+                            if(op2) begin           //if op2 ain't 0 
+                                sign <= op2[15];
+                                if(op2[15]) int <= (~op2) + 1; //possible error: may not execute in 1 clock cycle (2's compliment)
+                                else int <= op2;
+                                state <= `FPU_ITOF_S2;
+                            end else begin          //if we's a dummy and try to convert 0 to float 
+                                result <= 0;
+                                done <= 1;
+                            end
+                        end
+                        `OPftoi: begin end
+                        `OPmulf: begin end
+                        `OPrecf: begin end
+                        `OPsubf: begin end
+                        `OPaddf: begin end
+                        default: begin end
+                    endcase 
                 end
-                `OPftoi: begin end
-                `OPmulf: begin end
-                `OPrecf: begin end
-                `OPsubf: begin end
-                `OPaddf: begin end
-    
-                default: begin end
-            endcase 
+                
+                
+                
+                `FPU_ITOF_S2: begin
+                    exp <= 127 + (15 - d);
+                    tmp <= (int << (d + 1));
+                    state <= `FPU_ITOF_S3;
+                end
+                `FPU_ITOF_S3: begin 
+                    result <= {sign, exp, tmp[15:9]};
+                    done <= 1; 
+                end
+            endcase
         end
     end
 endmodule
@@ -204,7 +230,8 @@ Stage 1
           (`FRZ_DEP_INSTR `Dest == ir_in0 `Dest) ||
           (ir_in0 `CC == `S) || (ir_in2 `CC == `S) || (ir_in3 `CC == `S) ||
           ((`FRZ_DEP_INSTR == `OPldr) && ((ir_in0 `Opcode  == `OPstr) || (ir_in2 `Opcode  == `OPstr) || (ir_in3 `Opcode  == `OPstr))) ||
-          ((`FRZ_DEP_INSTR == `OPstr) && ((ir_in0 `Opcode  == `OPldr) || (ir_in2 `Opcode  == `OPldr) || (ir_in3 `Opcode  == `OPldr)))) begin
+          ((`FRZ_DEP_INSTR == `OPstr) && ((ir_in0 `Opcode  == `OPldr) || (ir_in2 `Opcode  == `OPldr) || (ir_in3 `Opcode  == `OPldr)))) 
+          begin
           ir_in2 <= `NOP;
           frz <= 1; 
       end else begin 
