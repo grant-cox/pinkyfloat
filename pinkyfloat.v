@@ -80,11 +80,16 @@ endmodule
 //floating point unit
 //reg done : 1 when the floating point operation has completed
 //reg done : 0 when the floating point operation is currently running
-module fpu(input en, input clk, input `WORD op1, input `WORD op2, input [5:0] instr, output reg `WORD result, output reg done);
+module fpu(input en, input clk, input `WORD op1, input `WORD op2, input [4:0] instr, output reg `WORD result, output reg done);
     // Sign = ((i & 0x8000) ? 1 : 0);
     // Exp = ((i >> 7) & 0xff);
     // Frac = ((i & 0x7f) + (f16 ? 0x80 : 0));
     // if int = 0x0000 then the fraction becomes 0, otherwise normalize with 0x80'
+    initial begin
+        done <= 1;
+    end
+
+
     integer state = `FPU_START;
     integer tmp;
     reg sign;
@@ -151,6 +156,15 @@ module processor(halt, reset, clk);
     reg `PRESIZE PREval; //contains the PRE value, if there is one
     reg regWrite; //control mux
 
+    reg `WORD ir_in0, ir_in1, ir_in2, ir_in3;
+    reg `WORD PC_in0, PC_in1, PC_in2, PC_in3;
+    reg `WORD outputVal; //output from the ALU or MEM
+    reg `WORD op1, op2;
+
+    reg fpu_en = 0; wire fpu_done = 1; wire `WORD fpu_result;
+//module fpu(input en, input clk, input `WORD op1, input `WORD op2, input [4:0] instr, output reg `WORD result, output reg done);
+    fpu myfpu(.en(fpu_en), .clk(clk), .op1(op1), .op2(op2), .instr(ir_in3 `Opcode), .result(fpu_result), .done(fpu_done));
+
     always @(reset) begin
         halt = 0;
         init = 1;
@@ -159,16 +173,12 @@ module processor(halt, reset, clk);
         PC_in0=0;
         PREval=0;
         PREflag=0;
+        fpu_en = 0;
         $readmemh("instruction.mem", instrmem);          
         $readmemh("regfile.mem", regfile);               
         //$readmemh2(datamem);        
         $readmemh("reciprocal_look.mem", reciprocal_lookup);
     end
-    
-        reg `WORD ir_in0, ir_in1, ir_in2, ir_in3;
-        reg `WORD PC_in0, PC_in1, PC_in2, PC_in3;
-        reg `WORD outputVal; //output from the ALU or MEM
-        reg `WORD op1, op2;
        
    
 /*
@@ -178,28 +188,30 @@ Stage 0 (owns PC)
 -Performs writes to the regfile
 */
     always @(posedge clk) begin
-      //writing to the register
-      //condition: processor not being initialized, regWrite = 1, in_in0 is not jump
-      if ((!init) && regWrite && !(ir_in0 `Dest == `PCWRITE)) regfile[ir_in0 `Dest] = outputVal;
+        if(fpu_done && !fpu_en) begin
+            //writing to the register
+            //condition: processor not being initialized, regWrite = 1, in_in0 is not jump
+            if ((!init) && regWrite && !(ir_in0 `Dest == `PCWRITE)) regfile[ir_in0 `Dest] = outputVal;
 
-      //setting the Z-flag
-      if ((ir_in0 `CC == `S) && (ir_in0[15:12]!=`OPpre) && (!init)) Zflag = !outputVal;
+            //setting the Z-flag
+            if ((ir_in0 `CC == `S) && (ir_in0[15:12]!=`OPpre) && (!init)) Zflag = !outputVal;
 
-      if(ir_in0 `Dest == `PCWRITE) begin //processing JUMPS
-          PC_in0 <= outputVal+1;
-          PC_in1 <= outputVal;
-          regfile[15] <=outputVal;
-          frz<=0;
-      end else if(!frz) begin    //processing regular instructions that aren't jumps
-          PC_in0 <= PC_in0 + 1;
-          PC_in1 <= PC_in0;
-          if(PC_in3===16'bxxxxxxxxxxxxxxxx) begin
-             regfile[15]<=0;    
-          end else begin
-             regfile[15] <= PC_in3+1; //setting the pc
-          end
-      end //end else if
-      
+            if(ir_in0 `Dest == `PCWRITE) begin //processing JUMPS
+                PC_in0 <= outputVal+1;
+                PC_in1 <= outputVal;
+                regfile[15] <=outputVal;
+                frz<=0;
+            end else if(!frz) begin    //processing regular instructions that aren't jumps
+                PC_in0 <= PC_in0 + 1;
+                PC_in1 <= PC_in0;
+                if(PC_in3===16'bxxxxxxxxxxxxxxxx) begin
+                    regfile[15]<=0;    
+                end else begin
+                    regfile[15] <= PC_in3+1; //setting the pc
+                end
+            end //end else if
+        end
+        
     end
 
 /*
@@ -210,40 +222,41 @@ Stage 1
 */
 
     always @(posedge clk) begin
-  
-      //These are the dependencies we check for. If there is a dependency, we send NOPs until it is resolved.
-      if (`FRZ_DEP_INSTR[15:12] == `OPpre) begin
-          PREval<=`FRZ_DEP_INSTR[11:0];
-           frz <= 0; 
-           if( !((`FRZ_DEP_INSTR `CC == `EQ && Zflag==0) || (`FRZ_DEP_INSTR `CC == `NE && Zflag==1))) begin
-              ir_in2 <= `FRZ_DEP_INSTR;
-              PC_in2 <= PC_in1;
-           end
-      end else if ((ir_in3 `Dest == `PCWRITE) ||
-          (ir_in2 `Dest == `PCWRITE) || 
-          (ir_in0 `Dest == `PCWRITE) || 
-          ((`FRZ_DEP_INSTR `isReg) && (`FRZ_DEP_INSTR `Op2 == ir_in3 `Dest)) || 
-          ((`FRZ_DEP_INSTR `isReg) && (`FRZ_DEP_INSTR `Op2 == ir_in2 `Dest)) || 
-          ((`FRZ_DEP_INSTR `isReg) && (`FRZ_DEP_INSTR `Op2 == ir_in0 `Dest)) ||  
-          (`FRZ_DEP_INSTR `Dest == ir_in3 `Dest) ||
-          (`FRZ_DEP_INSTR `Dest == ir_in2 `Dest) ||
-          (`FRZ_DEP_INSTR `Dest == ir_in0 `Dest) ||
-          (ir_in0 `CC == `S) || (ir_in2 `CC == `S) || (ir_in3 `CC == `S) ||
-          ((`FRZ_DEP_INSTR == `OPldr) && ((ir_in0 `Opcode  == `OPstr) || (ir_in2 `Opcode  == `OPstr) || (ir_in3 `Opcode  == `OPstr))) ||
-          ((`FRZ_DEP_INSTR == `OPstr) && ((ir_in0 `Opcode  == `OPldr) || (ir_in2 `Opcode  == `OPldr) || (ir_in3 `Opcode  == `OPldr)))) 
-          begin
-          ir_in2 <= `NOP;
-          frz <= 1; 
-      end else begin 
-         
-          frz <= 0; 
+        if(fpu_done && !fpu_en) begin
+            //These are the dependencies we check for. If there is a dependency, we send NOPs until it is resolved.
+            if (`FRZ_DEP_INSTR[15:12] == `OPpre) begin
+                PREval<=`FRZ_DEP_INSTR[11:0];
+                frz <= 0; 
+                if( !((`FRZ_DEP_INSTR `CC == `EQ && Zflag==0) || (`FRZ_DEP_INSTR `CC == `NE && Zflag==1))) begin
+                    ir_in2 <= `FRZ_DEP_INSTR;
+                    PC_in2 <= PC_in1;
+                end
+            end else if ((ir_in3 `Dest == `PCWRITE) ||
+                (ir_in2 `Dest == `PCWRITE) || 
+                (ir_in0 `Dest == `PCWRITE) || 
+                ((`FRZ_DEP_INSTR `isReg) && (`FRZ_DEP_INSTR `Op2 == ir_in3 `Dest)) || 
+                ((`FRZ_DEP_INSTR `isReg) && (`FRZ_DEP_INSTR `Op2 == ir_in2 `Dest)) || 
+                ((`FRZ_DEP_INSTR `isReg) && (`FRZ_DEP_INSTR `Op2 == ir_in0 `Dest)) ||  
+                (`FRZ_DEP_INSTR `Dest == ir_in3 `Dest) ||
+                (`FRZ_DEP_INSTR `Dest == ir_in2 `Dest) ||
+                (`FRZ_DEP_INSTR `Dest == ir_in0 `Dest) ||
+                (ir_in0 `CC == `S) || (ir_in2 `CC == `S) || (ir_in3 `CC == `S) ||
+                ((`FRZ_DEP_INSTR == `OPldr) && ((ir_in0 `Opcode  == `OPstr) || (ir_in2 `Opcode  == `OPstr) || (ir_in3 `Opcode  == `OPstr))) ||
+                ((`FRZ_DEP_INSTR == `OPstr) && ((ir_in0 `Opcode  == `OPldr) || (ir_in2 `Opcode  == `OPldr) || (ir_in3 `Opcode  == `OPldr)))) 
+                begin
+                ir_in2 <= `NOP;
+                frz <= 1; 
+            end else begin 
+                
+                frz <= 0; 
 
-          if( !((`FRZ_DEP_INSTR `CC == `EQ && Zflag==0) || (`FRZ_DEP_INSTR `CC == `NE && Zflag==1))) begin
-              ir_in2 <= `FRZ_DEP_INSTR;
-              PC_in2 <= PC_in1;
-          end
+                if( !((`FRZ_DEP_INSTR `CC == `EQ && Zflag==0) || (`FRZ_DEP_INSTR `CC == `NE && Zflag==1))) begin
+                    ir_in2 <= `FRZ_DEP_INSTR;
+                    PC_in2 <= PC_in1;
+                end
 
-      end
+            end
+        end
     end
 
 /*
@@ -252,23 +265,24 @@ Stage 2
 -sign extension
 -read from register files
 */
-  always @(posedge clk) begin
+    always @(posedge clk) begin
+        if(fpu_done && !fpu_en) begin
+            if(ir_in2[15:12] ==`OPpre) PREflag<=1;
 
-       if(ir_in2[15:12] ==`OPpre) PREflag<=1;
+            op1 <= regfile[ir_in2 `Dest];
 
-       op1 <= regfile[ir_in2 `Dest];
-
-        if (ir_in2 `isReg == 1) begin
-          op2 <= regfile[ir_in2 `Op2];
-        end else if (PREflag && (ir_in2!=`NOP)) begin
-          op2 <= {PREval, ir_in2 `Op2};
-          PREflag <=0;
-        end else begin
-          op2 <= {{12{ir_in2[3]}}, ir_in2 `Op2};
+                if (ir_in2 `isReg == 1) begin
+                op2 <= regfile[ir_in2 `Op2];
+                end else if (PREflag && (ir_in2!=`NOP)) begin
+                op2 <= {PREval, ir_in2 `Op2};
+                PREflag <=0;
+                end else begin
+                op2 <= {{12{ir_in2[3]}}, ir_in2 `Op2};
+                end
+            
+            ir_in3 <= ir_in2;
+            PC_in3 <= PC_in2;
         end
-    
-    ir_in3 <= ir_in2;
-    PC_in3 <= PC_in2;
   end
 
 /*
@@ -276,43 +290,47 @@ Stage 3
 -Select Memory or ALU, perform appropriate operation
 -Output the DestVal
 */
+    always @(fpu_done && fpu_en) begin fpu_en <= 0; end
+
   always @(posedge clk) begin
-    //this case statement begins after we ensure we've made it to to the first instruction or else it halts prematurely
-    if(ir_in3 === 16'bxxxxxxxxxxxxxxxx || ir_in3 === 16'b1xxxxxxxxxxxxxxx || ir_in3 [15:14] == `OPpre) begin #0; end 
-    //the default needs to be halt instead of #1 so that it doesn't run infinitely
-    else begin case (ir_in3 `Opcode) 
-        `OPadd: begin outputVal<=op1+op2; regWrite<=1; end
-        `OPsub: begin outputVal<=op1-op2; regWrite<=1; end
-        `OPmul: begin outputVal<=op1*op2; regWrite<=1; end
-        `OPand: begin outputVal<=op1&op2; regWrite<=1; end
-        `OPorr: begin outputVal<=op1|op2; regWrite<=1; end
-        `OPeor: begin outputVal<=op1^op2; regWrite<=1; end
-        `OPbic: begin outputVal<=op1&~op2; regWrite<=1; end
-        `OPslt: begin outputVal<=op1<op2; regWrite<=1; end
-        `OPmov: begin outputVal<=op2; regWrite<=1; end
-        `OPneg: begin outputVal<=-1*op2; regWrite<=1; end
-        `OPsha: begin outputVal<=((op2>0) ? (op1 << op2) : (op1 >> -1*op2)); regWrite<=1; end
-        `OPstr: begin datamem[op2] <= regfile[ir_in3 `Dest]; regWrite<=0; end
-        `OPldr: begin outputVal<=datamem[op2]; regWrite<=1; end
-        `OPitof: begin end //add FPU module instantiation
-        default: begin halt<=1; end
-    endcase
-    end       
+    if(fpu_done && !fpu_en) begin
+        //this case statement begins after we ensure we've made it to to the first instruction or else it halts prematurely
+        if(ir_in3 === 16'bxxxxxxxxxxxxxxxx || ir_in3 === 16'b1xxxxxxxxxxxxxxx || ir_in3 [15:14] == `OPpre) begin #0; end 
+        //the default needs to be halt instead of #1 so that it doesn't run infinitely
+        else begin case (ir_in3 `Opcode) 
+            `OPadd: begin outputVal<=op1+op2; regWrite<=1; end
+            `OPsub: begin outputVal<=op1-op2; regWrite<=1; end
+            `OPmul: begin outputVal<=op1*op2; regWrite<=1; end
+            `OPand: begin outputVal<=op1&op2; regWrite<=1; end
+            `OPorr: begin outputVal<=op1|op2; regWrite<=1; end
+            `OPeor: begin outputVal<=op1^op2; regWrite<=1; end
+            `OPbic: begin outputVal<=op1&~op2; regWrite<=1; end
+            `OPslt: begin outputVal<=op1<op2; regWrite<=1; end
+            `OPmov: begin outputVal<=op2; regWrite<=1; end
+            `OPneg: begin outputVal<=-1*op2; regWrite<=1; end
+            `OPsha: begin outputVal<=((op2>0) ? (op1 << op2) : (op1 >> -1*op2)); regWrite<=1; end
+            `OPstr: begin datamem[op2] <= regfile[ir_in3 `Dest]; regWrite<=0; end
+            `OPldr: begin outputVal<=datamem[op2]; regWrite<=1; end
+            `OPitof: begin fpu_en <= 1; end //add FPU module instantiation
+            default: begin halt<=1; end
+        endcase
+        end       
 
-    //whenever the first instruction gets to this phase, init is set to 0... this may have to be moved elsewhere
-    if(ir_in3 !== 16'bxxxxxxxxxxxxxxxx && init==1) init<=0;
-          
-    //just to make sure that we never enter an infinite loop
-    if(ir_in3 === 16'bxxxxxxxxxxxxxxxx && init==0 && frz==0) begin
-      halt<=1;
-    end
+        //whenever the first instruction gets to this phase, init is set to 0... this may have to be moved elsewhere
+        if(ir_in3 !== 16'bxxxxxxxxxxxxxxxx && init==1) init<=0;
+            
+        //just to make sure that we never enter an infinite loop
+        if(ir_in3 === 16'bxxxxxxxxxxxxxxxx && init==0 && frz==0) begin
+        halt<=1;
+        end
 
-    //to make sure that we have not entered an infinite loop... PC can never exceed 10000
-    if(PC_in0==10000) begin
-      halt<=1;
+        //to make sure that we have not entered an infinite loop... PC can never exceed 10000
+        if(PC_in0==10000) begin
+        halt<=1;
+        end
+        
+        ir_in0 <= ir_in3;
     end
-    
-    ir_in0 <= ir_in3;
   end
 
 endmodule

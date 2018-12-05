@@ -1,5 +1,5 @@
 $date
-	Wed Dec  5 13:00:44 2018
+	Wed Dec  5 13:46:14 2018
 $end
 $version
 	Icarus Verilog
@@ -10,218 +10,283 @@ $end
 $scope module testbench $end
 $scope module PE $end
 $var wire 1 ! clk $end
-$var wire 1 " reset $end
-$var reg 16 # PC_in0 [15:0] $end
-$var reg 16 $ PC_in1 [15:0] $end
-$var reg 16 % PC_in2 [15:0] $end
-$var reg 16 & PC_in3 [15:0] $end
-$var reg 1 ' PREflag $end
-$var reg 12 ( PREval [11:0] $end
-$var reg 1 ) Zflag $end
-$var reg 1 * frz $end
-$var reg 1 + halt $end
-$var reg 1 , init $end
-$var reg 16 - ir_in0 [15:0] $end
-$var reg 16 . ir_in2 [15:0] $end
-$var reg 16 / ir_in3 [15:0] $end
-$var reg 16 0 op1 [15:0] $end
-$var reg 16 1 op2 [15:0] $end
-$var reg 16 2 outputVal [15:0] $end
-$var reg 1 3 regWrite $end
+$var wire 1 " fpu_done $end
+$var wire 1 # reset $end
+$var wire 16 $ fpu_result [15:0] $end
+$var reg 16 % PC_in0 [15:0] $end
+$var reg 16 & PC_in1 [15:0] $end
+$var reg 16 ' PC_in2 [15:0] $end
+$var reg 16 ( PC_in3 [15:0] $end
+$var reg 1 ) PREflag $end
+$var reg 12 * PREval [11:0] $end
+$var reg 1 + Zflag $end
+$var reg 1 , fpu_en $end
+$var reg 1 - frz $end
+$var reg 1 . halt $end
+$var reg 1 / init $end
+$var reg 16 0 ir_in0 [15:0] $end
+$var reg 16 1 ir_in2 [15:0] $end
+$var reg 16 2 ir_in3 [15:0] $end
+$var reg 16 3 op1 [15:0] $end
+$var reg 16 4 op2 [15:0] $end
+$var reg 16 5 outputVal [15:0] $end
+$var reg 1 6 regWrite $end
+$scope module myfpu $end
+$var wire 1 ! clk $end
+$var wire 1 , en $end
+$var wire 5 7 instr [4:0] $end
+$var wire 16 8 op1 [15:0] $end
+$var wire 16 9 op2 [15:0] $end
+$var wire 5 : d [4:0] $end
+$var reg 1 ; done $end
+$var reg 8 < exp [7:0] $end
+$var reg 16 = int [15:0] $end
+$var reg 16 > result [15:0] $end
+$var reg 1 ? sign $end
+$var integer 32 @ state [31:0] $end
+$var integer 32 A tmp [31:0] $end
+$scope module lead0 $end
+$var wire 16 B s [15:0] $end
+$var reg 5 C d [4:0] $end
+$var reg 2 D s2 [1:0] $end
+$var reg 4 E s4 [3:0] $end
+$var reg 8 F s8 [7:0] $end
+$upscope $end
+$upscope $end
 $upscope $end
 $upscope $end
 $scope module testbench $end
 $scope module PE $end
-$var reg 16 4 \regfile[0] [15:0] $end
+$var reg 16 G \regfile[0] [15:0] $end
 $upscope $end
 $upscope $end
 $scope module testbench $end
 $scope module PE $end
-$var reg 16 5 \regfile[1] [15:0] $end
+$var reg 16 H \regfile[1] [15:0] $end
 $upscope $end
 $upscope $end
 $scope module testbench $end
 $scope module PE $end
-$var reg 16 6 \regfile[2] [15:0] $end
+$var reg 16 I \regfile[2] [15:0] $end
 $upscope $end
 $upscope $end
 $scope module testbench $end
 $scope module PE $end
-$var reg 16 7 \regfile[3] [15:0] $end
+$var reg 16 J \regfile[3] [15:0] $end
 $upscope $end
 $upscope $end
 $enddefinitions $end
 #0
 $dumpvars
-b0 7
-b0 6
-b0 5
-b0 4
-x3
+b0 J
+b0 I
+b0 H
+b0 G
+bx F
+bx E
+bx D
+bx C
+bx B
+bx A
+b110010 @
+x?
+bx >
+bx =
+bx <
+1;
+bx :
+bx 9
+bx 8
+bx 7
+x6
+bx 5
+bx 4
+bx 3
 bx 2
 bx 1
 bx 0
-bx /
-bx .
-bx -
-1,
+1/
+0.
+0-
+0,
 0+
-0*
+b0 *
 0)
-b0 (
-0'
+bx (
+bx '
 bx &
-bx %
+b0 %
 bx $
-b0 #
-0"
+0#
+1"
 0!
 $end
 #10
-b0 7
-b0 6
-b0 5
-b0 4
-1"
+b0 J
+b0 I
+b0 H
+b0 G
+1#
 #20
-b0 7
-b0 6
-b0 5
-b0 4
-0"
+b0 J
+b0 I
+b0 H
+b0 G
+0#
 #30
-b0 $
-b1 #
+b0 &
+b1 %
 1!
 #40
 0!
 #50
-b0 %
-b101 .
-b1 $
-b10 #
+b0 '
+b101 1
+b1 &
+b10 %
 1!
 #60
 0!
 #70
-b10 $
-b11 #
-1*
-b1xxxxxxxxxxxxxxx .
-b0 &
-b101 /
-b101 1
-b0 0
+b0 7
+b10 &
+b11 %
+1-
+b1xxxxxxxxxxxxxxx 1
+b0 (
+b101 2
+b101 4
+b101 9
+b0 3
+b0 8
 1!
 #80
 0!
 #90
-b1xxxxxxxxxxxxxxx /
-bx 1
-bx 0
-b101 -
-0,
-13
-b101 2
+b1xxxx 7
+b1xxxxxxxxxxxxxxx 2
+bx 4
+bx 9
+bx 3
+bx 8
+b101 0
+0/
+16
+b101 5
 1!
 #100
 0!
 #110
-b1xxxxxxxxxxxxxxx -
-b101 4
+b1xxxxxxxxxxxxxxx 0
+b101 G
 1!
 #120
 0!
 #130
-b10 %
-b100 .
-0*
+b10 '
+b100 1
+0-
 1!
 #140
 0!
 #150
-b11 $
-b100 #
-1*
-b1xxxxxxxxxxxxxxx .
-b10 &
-b100 /
-b100 1
-b101 0
+b0 7
+b11 &
+b100 %
+1-
+b1xxxxxxxxxxxxxxx 1
+b10 (
+b100 2
+b100 4
+b100 9
+b101 3
+b101 8
 1!
 #160
 0!
 #170
-b1xxxxxxxxxxxxxxx /
-bx 1
-bx 0
-b100 -
-b1001 2
+b1xxxx 7
+b1xxxxxxxxxxxxxxx 2
+bx 4
+bx 9
+bx 3
+bx 8
+b100 0
+b1001 5
 1!
 #180
 0!
 #190
-b1xxxxxxxxxxxxxxx -
-b1001 4
+b1xxxxxxxxxxxxxxx 0
+b1001 G
 1!
 #200
 0!
 #210
-b11 %
-b11 .
-0*
+b11 '
+b11 1
+0-
 1!
 #220
 0!
 #230
-b100 $
-b101 #
-1*
-b1xxxxxxxxxxxxxxx .
-b11 &
-b11 /
-b11 1
-b1001 0
+b0 7
+b100 &
+b101 %
+1-
+b1xxxxxxxxxxxxxxx 1
+b11 (
+b11 2
+b11 4
+b11 9
+b1001 3
+b1001 8
 1!
 #240
 0!
 #250
-b1xxxxxxxxxxxxxxx /
-bx 1
-bx 0
-b11 -
-b1100 2
+b1xxxx 7
+b1xxxxxxxxxxxxxxx 2
+bx 4
+bx 9
+bx 3
+bx 8
+b11 0
+b1100 5
 1!
 #260
 0!
 #270
-b1xxxxxxxxxxxxxxx -
-b1100 4
+b1xxxxxxxxxxxxxxx 0
+b1100 G
 1!
 #280
 0!
 #290
-b100 %
-b1010100000000000 .
-0*
+b100 '
+b1010100000000000 1
+0-
 1!
 #300
 0!
 #310
-b101 $
-b110 #
-b100 &
-b1010100000000000 /
-b0 1
-b1100 0
+b10101 7
+b101 &
+b110 %
+b100 (
+b1010100000000000 2
+b0 4
+b0 9
+b1100 3
+b1100 8
 1!
 #320
 0!
 #330
-b110 $
-b111 #
-b1010100000000000 -
-1+
+b110 &
+b111 %
+b1010100000000000 0
+1.
 1!
 #340
 0!
