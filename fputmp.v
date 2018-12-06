@@ -53,6 +53,7 @@
 `define FPU_START 50
 `define FPU_ITOF_S2 51
 `define FPU_ITOF_S3 52
+`define FPU_FTOI_S2 53
 
 module lead0s(d, s);
     output reg[4:0] d; input wire[15:0] s;
@@ -112,7 +113,18 @@ module fpu(input en, input clk, input `WORD op1, input `WORD op2, input [4:0] in
                             end
                         end
                         `OPFTOI: begin 
-
+                            if(op2) begin
+                                if(op2 `EXP > 134) //neg case
+                                    result <= {1'b1, op2 `MANT} << (op2 `EXP - 134);
+                                else
+                                    result <= {1'b1, op2 `MANT} >> (134 - op2 `EXP); //working for pos only
+                                
+                                if (op2 `SIGN) state <= `FPU_FTOI_S2;
+                                else done <= 1;
+                            end else begin
+                                result <= 0;
+                                done <= 1;
+                            end
                         end
                         `OPMULF: begin end
                         `OPRECF: begin end
@@ -134,6 +146,12 @@ module fpu(input en, input clk, input `WORD op1, input `WORD op2, input [4:0] in
                     done <= 1; 
 					state = `FPU_START;
                 end
+
+                `FPU_FTOI_S2: begin
+                    result <= ~result + 1;
+                    done <= 1;
+                    state = `FPU_START;
+                end
             endcase
         end
     end
@@ -145,9 +163,9 @@ module testbench;
     integer counter = 0;
     wire `DATA result;
     wire done;
-    reg [4:0] instr = `OPITOF;
+    reg [4:0] instr = `OPFTOI;
     reg `DATA rd = 0;
-    reg `DATA rn = 16'h0028;
+    reg `DATA rn = 16'hc4df; //1784
     reg en;
 
     fpu myfpu(.en(en), .clk(clk), .op1(rd), .op2(rn), .instr(instr), .result(result), .done(done));
@@ -158,7 +176,7 @@ module testbench;
         $dumpvars(0,myfpu);
         #4 en = 1;
 
-        while (counter < 12) begin
+        while (counter < 5) begin
             #5 clk = 1;
             #5 clk = 0;
             counter = counter + 1;
