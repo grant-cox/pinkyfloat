@@ -54,6 +54,7 @@
 `define FPU_ITOF_S2 51
 `define FPU_ITOF_S3 52
 `define FPU_FTOI_S2 53
+`define FPU_MULF_S2 54
 
 module lead0s(d, s);
     output reg[4:0] d; input wire[15:0] s;
@@ -91,6 +92,7 @@ module fpu(input en, input clk, input `WORD op1, input `WORD op2, input [4:0] in
     reg [7:0] exp;
     reg [6:0] frac;
     reg `WORD int;
+    reg `WORD mant_mul;
     wire [4:0] d;
     lead0s lead0(.d(d), .s(int));
     always @(posedge clk) begin
@@ -126,15 +128,25 @@ module fpu(input en, input clk, input `WORD op1, input `WORD op2, input [4:0] in
                                 done <= 1;
                             end
                         end
-                        `OPMULF: begin end
+                        `OPMULF: begin
+                            //if either operands are 0, then the result will be 0
+                            if( (op1 == 0) || (op2 == 0) ) begin
+                                result <= 0;
+                                done <= 1;
+                            end else begin
+                                sign <= (op1 `SIGN ^ op2 `SIGN);
+                                exp <= ((op1 `EXP + op2 `EXP) - 127);
+                                int <= (op1 `MANT * op2 `MANT);
+                                state <= `FPU_MULF_S2;
+                            end
+
+                        end
                         `OPRECF: begin end
                         `OPSUBF: begin end
                         `OPADDF: begin end
                         default: begin end
                     endcase 
                 end
-                
-                
                 
                 `FPU_ITOF_S2: begin
                     exp <= 127 + (15 - d);
@@ -152,6 +164,12 @@ module fpu(input en, input clk, input `WORD op1, input `WORD op2, input [4:0] in
                     done <= 1;
                     state = `FPU_START;
                 end
+
+                `FPU_MULF_S2: begin
+                    exp <= exp + (1 - d);
+                    
+                end
+
             endcase
         end
     end
