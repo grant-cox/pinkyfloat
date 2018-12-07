@@ -55,6 +55,7 @@
 `define FPU_ITOF_S3 52
 `define FPU_FTOI_S2 53
 `define FPU_MULF_S2 54
+`define FPU_RECF_S2 55
 
 module lead0s(d, s);
     output reg[4:0] d; input wire[15:0] s;
@@ -90,12 +91,17 @@ module fpu(input en, input clk, input `WORD op1, input `WORD op2, input [4:0] in
     integer tmp;
     reg sign;
     reg [7:0] exp;
-    reg [7:0] exp_p1; //for MULF instruction, this is the speculative exponent result if the mant multiply overflows
+    reg [7:0] exp_p1; //for MULF instruction, this is the speculative exponent result if the mantissa multiply overflows
     reg [6:0] frac;
     reg `WORD int;
     reg `WORD mant_mul;
     wire [4:0] d;
     lead0s lead0(.d(d), .s(int));
+    reg [7:0] reciprocal_lookup [127:0];
+    initial begin
+        $readmemh("reciprocal_look.mem", reciprocal_lookup);
+    end
+
     always @(posedge clk) begin
         if (en) begin
  	            case(state)
@@ -143,7 +149,12 @@ module fpu(input en, input clk, input `WORD op1, input `WORD op2, input [4:0] in
                             end
 
                         end
-                        `OPRECF: begin end
+                        `OPRECF: begin 
+                            sign <= op2 `SIGN;
+                            exp <= 253 - op2 `EXP;
+                            frac <= reciprocal_lookup[op2 `MANT];
+                            state <= `FPU_RECF_S2;
+                        end
                         `OPSUBF: begin end
                         `OPADDF: begin end
                         default: begin end
@@ -173,6 +184,12 @@ module fpu(input en, input clk, input `WORD op1, input `WORD op2, input [4:0] in
                     end else begin
                         result <= {sign, exp, {int[13:8], 1'b0}};
                     end
+                    done <= 1;
+                end
+
+                `FPU_RECF_S2: begin
+                    result <= {sign, exp, frac};
+                    done <= 1;
                 end
 
             endcase
@@ -181,15 +198,15 @@ module fpu(input en, input clk, input `WORD op1, input `WORD op2, input [4:0] in
 endmodule
 
 module testbench;
-//module fpu(input en, input clk, input `WORD op1, input `WORD op2, input [4:0] instr, output reg `WORD result, output reg done);
     reg clk = 0;
     integer counter = 0;
     wire `DATA result;
     wire done;
-    reg [4:0] instr = `OPMULF;
-    reg `DATA rd = 16'h400a;
-    reg `DATA rn = 16'h3f63; //1784
+    reg [4:0] instr = `OPRECF;
+    reg `DATA rd = 16'h48c3;
+    reg `DATA rn = 16'h3bff; //1784
     reg en;
+
 
     fpu myfpu(.en(en), .clk(clk), .op1(rd), .op2(rn), .instr(instr), .result(result), .done(done));
 
