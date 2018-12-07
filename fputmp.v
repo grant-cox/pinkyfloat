@@ -90,6 +90,7 @@ module fpu(input en, input clk, input `WORD op1, input `WORD op2, input [4:0] in
     integer tmp;
     reg sign;
     reg [7:0] exp;
+    reg [7:0] exp_p1; //for MULF instruction, this is the speculative exponent result if the mant multiply overflows
     reg [6:0] frac;
     reg `WORD int;
     reg `WORD mant_mul;
@@ -134,9 +135,10 @@ module fpu(input en, input clk, input `WORD op1, input `WORD op2, input [4:0] in
                                 result <= 0;
                                 done <= 1;
                             end else begin
-                                sign <= (op1 `SIGN ^ op2 `SIGN);
-                                exp <= ((op1 `EXP + op2 `EXP) - 127);
-                                int <= (op1 `MANT * op2 `MANT);
+                                sign <= (op1 `SIGN ^ op2 `SIGN); 
+                                exp <= ((op1 `EXP + op2 `EXP) - 127); //add exponents and subtract bias for result exp
+                                exp_p1 <= ((op1 `EXP + op2 `EXP) - 126);
+                                int <= ({1'b1, op1 `MANT} * {1'b1,op2 `MANT}); //multiply the mantissa and store into 16 bit container
                                 state <= `FPU_MULF_S2;
                             end
 
@@ -166,8 +168,11 @@ module fpu(input en, input clk, input `WORD op1, input `WORD op2, input [4:0] in
                 end
 
                 `FPU_MULF_S2: begin
-                    exp <= exp + (1 - d);
-                    
+                    if(int[15] == 1) begin
+                        result <= {sign, exp_p1, int[14:8]};
+                    end else begin
+                        result <= {sign, exp, {int[13:8], 1'b0}};
+                    end
                 end
 
             endcase
@@ -181,9 +186,9 @@ module testbench;
     integer counter = 0;
     wire `DATA result;
     wire done;
-    reg [4:0] instr = `OPFTOI;
-    reg `DATA rd = 0;
-    reg `DATA rn = 16'hc4df; //1784
+    reg [4:0] instr = `OPMULF;
+    reg `DATA rd = 16'h400a;
+    reg `DATA rn = 16'h3f63; //1784
     reg en;
 
     fpu myfpu(.en(en), .clk(clk), .op1(rd), .op2(rn), .instr(instr), .result(result), .done(done));
