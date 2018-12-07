@@ -57,6 +57,17 @@
 `define FPU_MULF_S2 54
 `define FPU_RECF_S2 55
 
+module srl(dst, src, shift);
+    output reg[7:0] dst; input wire[7:0] src, shift;
+    reg[7:0] by1, by2, by4;
+    always @(*) begin
+        by1 = (shift[0] ? {1'b0, src[7:1]} : src);
+        by2 = (shift[1] ? {2'b0, by1[7:2]} : by1);
+        by4 = (shift[2] ? {4'b0, by2[7:4]} : by2);
+        dst = (shift[7:3] ? 0 : by4);
+    end
+endmodule
+
 module lead0s(d, s);
     output reg[4:0] d; input wire[15:0] s;
     reg[7:0] s8; reg[3:0] s4; reg[1:0] s2;
@@ -206,14 +217,12 @@ module testbench;
     reg `DATA rd = 16'h48c3;
     reg `DATA rn = 16'h3bff; //1784
     reg en;
-
-
     fpu myfpu(.en(en), .clk(clk), .op1(rd), .op2(rn), .instr(instr), .result(result), .done(done));
 
     initial begin
         $dumpfile("pfloat.vcp"); 
         //$dumpvars(0, PE, PE.r[0],PE.r[1],PE.r[2], PE.r[3]);
-        $dumpvars(0,myfpu);
+        $dumpvars();
         #4 en = 1;
 
         while (counter < 5) begin
