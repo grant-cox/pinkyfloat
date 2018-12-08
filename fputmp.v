@@ -50,13 +50,6 @@
 `define MANT [6:0] //7 bit mantissa (implied leading 1.mantissa)
 
 
-`define FPU_START 50
-`define FPU_ITOF_S2 51
-`define FPU_ITOF_S3 52
-`define FPU_FTOI_S2 53
-`define FPU_MULF_S2 54
-`define FPU_RECF_S2 55
-
 module srl(dst, src, shift);
     output reg[7:0] dst; input wire[7:0] src, shift;
     reg[7:0] by1, by2, by4;
@@ -84,15 +77,20 @@ module lead0s(d, s);
 endmodule
 
 
+`define FPU_START 50
+`define FPU_ITOF_S2 51
+`define FPU_ITOF_S3 52
+`define FPU_FTOI_S2 53
+`define FPU_MULF_S2 54
+`define FPU_RECF_S2 55
+`define FPU_ADDF_S2 56
+`define FPU_ADDF_S3 57
+`define FPU_ADDF_S4 58
 
 //floating point unit
 //reg done : 1 when the floating point operation has completed
 //reg done : 0 when the floating point operation is currently running
 module fpu(input en, input clk, input `WORD op1, input `WORD op2, input [4:0] instr, output reg `WORD result, output reg done);
-    // Sign = ((i & 0x8000) ? 1 : 0);
-    // Exp = ((i >> 7) & 0xff);
-    // Frac = ((i & 0x7f) + (f16 ? 0x80 : 0));
-    // if int = 0x0000 then the fraction becomes 0, otherwise normalize with 0x80'
     initial begin
         done <= 0;
     end
@@ -103,11 +101,21 @@ module fpu(input en, input clk, input `WORD op1, input `WORD op2, input [4:0] in
     reg sign;
     reg [7:0] exp;
     reg [7:0] exp_p1; //for MULF instruction, this is the speculative exponent result if the mantissa multiply overflows
-    reg [6:0] frac;
+    reg `MANT frac;
+    reg [7:0] frac_w1;
+    reg [7:0] lrg_frac_w1;
+    reg overflow; //tracks overflow of the mantissa addition for ADDF
+    reg `WORD larger; //larger of the two operands for ADDF and SUBF
+    reg `WORD smaller; //smaller of the two operands for ADDF and SUBF
+    reg [7:0] shift; //difference between the two exponent values for ADDF/SUBF
     reg `WORD int;
-    reg `WORD mant_mul;
-    wire [4:0] d;
+    //reg `WORD mant_mul;
+    wire [4:0] d; //output of the count leading 0s module
+    wire [7:0] srl_out; //output of barrel shifter module
+
     lead0s lead0(.d(d), .s(int));
+    srl mysrl(.dst(srl_out), .src(smaller[7:0]), .shift(shift)); //module srl(dst, src, shift);
+
     reg [7:0] reciprocal_lookup [127:0];
     initial begin
         $readmemh("reciprocal_look.mem", reciprocal_lookup);
@@ -167,7 +175,27 @@ module fpu(input en, input clk, input `WORD op1, input `WORD op2, input [4:0] in
                             state <= `FPU_RECF_S2;
                         end
                         `OPSUBF: begin end
-                        `OPADDF: begin end
+                        `OPADDF: begin
+                            if((op1 `SIGN == 0) &&(op2 `SIGN == 0)) begin //both numbers are positive
+                                sign <= 0; //result will be positive
+                                if(op1 `EXP > op2 `EXP) begin //op2 exponent will be adjusted to match op1
+                                    shift <= op1 `EXP - op2 `EXP; //determine the difference between the two exponents
+                                    larger <= op1;
+                                    smaller <= op2;
+                                    exp <= op1 `EXP;
+                                    state <= `FPU_ADDF_S3;
+                                    //frac_w1 <= {1'b1, op2 `MANT}; //the fraction being shifted is the smaller frac with implicit 1 concatenated to the beginning
+                                end 
+                                else if(op1 `EXP < op2 `EXP) begin //op1 exponent will be adjusted to match op2
+                                    shift <= op2 `EXP - op1 `EXP; //determine the difference between the two exponents
+                                    larger <= op2;
+                                    smaller <= op1;
+                                    exp <= op2 `EXP;
+                                    state <= `FPU_ADDF_S3;
+                                    //frac_w1 <= {1'b1, op1 `MANT};
+                                end
+                            end
+                         end
                         default: begin end
                     endcase 
                 end
@@ -201,6 +229,23 @@ module fpu(input en, input clk, input `WORD op1, input `WORD op2, input [4:0] in
                 `FPU_RECF_S2: begin
                     result <= {sign, exp, frac};
                     done <= 1;
+                end
+
+                `FPU_ADDF_S2: begin
+                    //perform twos complement operation
+                    // if (larger[15]) two's complement the mantissa (of larger)
+                    // if (smaller[15]) two's complement the mantissa (of smaller)
+                    
+                    state <= `FPU_ADDF_S3;
+                end
+
+                `FPU_ADDF_S3: begin
+                    {overflow, frac_w1} <= srl_out + {1'b1, larger[6:0]}; //smaller (shifted) mantissa is added to larger mantissa
+                end
+
+                `FPU_ADDF_S4: begin
+                    //result <= {sign, (exp + overflow), frac_w1[]}
+                    //normalize the mantissa if needed
                 end
 
             endcase
