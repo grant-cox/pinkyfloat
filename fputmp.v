@@ -115,7 +115,7 @@ module fpu(input en, input clk, input `WORD op1, input `WORD op2, input [4:0] in
     wire [7:0] srl_out; //output of barrel shifter module
 
     lead0s lead0(.d(d), .s(int));
-    srl mysrl(.dst(srl_out), .src(smaller[7:0]), .shift(shift)); //module srl(dst, src, shift);
+    srl mysrl(.dst(srl_out), .src( {1'b1, smaller[6:0]} ), .shift(shift)); //module srl(dst, src, shift);
 
     reg [7:0] reciprocal_lookup [127:0];
     initial begin
@@ -177,26 +177,33 @@ module fpu(input en, input clk, input `WORD op1, input `WORD op2, input [4:0] in
                         end
                         `OPSUBF: begin end
                         `OPADDF: begin
-                            if((op1 `SIGN == 0) &&(op2 `SIGN == 0)) begin //both numbers are positive
-                                sign <= 0; //result will be positive
-                                if(op1 `EXP > op2 `EXP) begin //op2 exponent will be adjusted to match op1
-                                    shift <= op1 `EXP - op2 `EXP; //determine the difference between the two exponents
-                                    larger <= op1;
-                                    smaller <= op2;
-                                    exp <= op1 `EXP;
-                                    state <= `FPU_ADDF_S3;
-                                    //frac_w1 <= {1'b1, op2 `MANT}; //the fraction being shifted is the smaller frac with implicit 1 concatenated to the beginning
-                                end 
-                                else if(op1 `EXP < op2 `EXP) begin //op1 exponent will be adjusted to match op2
-                                    shift <= op2 `EXP - op1 `EXP; //determine the difference between the two exponents
-                                    larger <= op2;
-                                    smaller <= op1;
-                                    exp <= op2 `EXP;
-                                    state <= `FPU_ADDF_S3;
-                                    //frac_w1 <= {1'b1, op1 `MANT};
-                                end
+                            if((op1 `SIGN == op2 `SIGN)) begin //pos pos and neg neg
+                                sign <= op1 `SIGN; //result will be positive
+                                state <= `FPU_ADDF_S3;
                             end
-                         end
+                            else begin //opposite signs
+                                state <= `FPU_ADDF_S2; //go to two's compliment stage 
+                                if(op1 `EXP > op2 `EXP)         sign <= op1 `SIGN;
+                                else                            sign <= op2 `SIGN;
+                            end
+
+                            if(op1 `EXP > op2 `EXP) begin //op2 exponent will be adjusted to match op1
+                                shift <= op1 `EXP - op2 `EXP; //determine the difference between the two exponents
+                                larger <= op1;
+                                smaller <= op2;
+                                exp <= op1 `EXP;
+                            end else if(op1 `EXP < op2 `EXP) begin //op1 exponent will be adjusted to match op2
+                                shift <= op2 `EXP - op1 `EXP; //determine the difference between the two exponents
+                                larger <= op2;
+                                smaller <= op1;
+                                exp <= op2 `EXP;
+                            end else begin
+                                shift <= 0;
+                                larger <= op1;
+                                smaller <= op2;
+                                exp <= op1 `EXP;
+                            end
+                        end
                         default: begin end
                     endcase 
                 end
@@ -234,8 +241,8 @@ module fpu(input en, input clk, input `WORD op1, input `WORD op2, input [4:0] in
 
                 `FPU_ADDF_S2: begin
                     //perform twos complement operation
-                    // if (larger[15]) two's complement the mantissa (of larger)
-                    // if (smaller[15]) two's complement the mantissa (of smaller)
+                    if (larger `SIGN) int <= ~{1'b1, larger `MANT} + 1; //concact implicit 1 -> 2's comp
+                    if (smaller `SIGN) int <= ~{1'b1, smaller `MANT} + 1;
                     
                     state <= `FPU_ADDF_S3;
                 end
@@ -243,14 +250,23 @@ module fpu(input en, input clk, input `WORD op1, input `WORD op2, input [4:0] in
                 `FPU_ADDF_S3: begin
                     int <= srl_out + {1'b1, larger[6:0]};
                     state <= `FPU_ADDF_S4;
+                    #1 $display("FPU_ADDF_S3: int = %b + %b = %b", srl_out, {1'b1, larger[6:0]}, int);
                     // {overflow, frac_w1} <= srl_out + {1'b1, larger[6:0]}; //smaller (shifted) mantissa is added to larger mantissa
                 end
 
                 `FPU_ADDF_S4: begin
                     //result <= {sign, (exp + overflow), frac_w1[]}
                     //normalize the mantissa if needed
-                    frac <= int << (d + 1);
-                    exp <= exp + int[8];
+                    //int <= int << (d + 1); //16 bit leading zero counter -- we are passing 8 bits to it, remove useless top 7
+                    if(int[8]) begin        // mantissa overflow case
+                        $display("mantissa overflow.");
+                        frac <= int[7:1];
+                        exp <= exp + 1;
+                    end
+                    else if(int[7]) begin //non overflow case
+                        $display("no mantissa overflow.");
+                        frac <= int[6:0];
+                    end
                     state <= `FPU_ADDF_S5;
                 end
 
@@ -271,9 +287,9 @@ module testbench;
     integer counter = 0;
     wire `DATA result;
     wire done;
-    reg [4:0] instr = `OPRECF;
-    reg `DATA rd = 16'h48c3;
-    reg `DATA rn = 16'h3bff; //1784
+    reg [4:0] instr = `OPADDF;
+    reg `DATA rd = 16'hc179;
+    reg `DATA rn = 16'h41a3; 
     reg en;
     fpu myfpu(.en(en), .clk(clk), .op1(rd), .op2(rn), .instr(instr), .result(result), .done(done));
 
