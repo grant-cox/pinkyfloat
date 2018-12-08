@@ -1,5 +1,5 @@
 $date
-	Fri Dec  7 18:48:39 2018
+	Fri Dec  7 19:21:17 2018
 $end
 $version
 	Icarus Verilog
@@ -28,38 +28,34 @@ $var reg 1 " done $end
 $var reg 8 . exp [7:0] $end
 $var reg 8 / exp_p1 [7:0] $end
 $var reg 7 0 frac [6:0] $end
-$var reg 8 1 frac_w1 [7:0] $end
-$var reg 16 2 int [15:0] $end
-$var reg 16 3 larger [15:0] $end
-$var reg 1 4 overflow $end
-$var reg 16 5 result [15:0] $end
-$var reg 8 6 shift [7:0] $end
-$var reg 1 7 sign $end
-$var reg 16 8 smaller [15:0] $end
-$var integer 32 9 state [31:0] $end
-$var integer 32 : tmp [31:0] $end
+$var reg 16 1 int [15:0] $end
+$var reg 16 2 larger [15:0] $end
+$var reg 16 3 result [15:0] $end
+$var reg 8 4 shift [7:0] $end
+$var reg 1 5 sign $end
+$var reg 16 6 smaller [15:0] $end
+$var integer 32 7 state [31:0] $end
+$var integer 32 8 tmp [31:0] $end
 $scope module lead0 $end
-$var wire 16 ; s [15:0] $end
-$var reg 5 < d [4:0] $end
-$var reg 2 = s2 [1:0] $end
-$var reg 4 > s4 [3:0] $end
-$var reg 8 ? s8 [7:0] $end
+$var wire 16 9 s [15:0] $end
+$var reg 5 : d [4:0] $end
+$var reg 2 ; s2 [1:0] $end
+$var reg 4 < s4 [3:0] $end
+$var reg 8 = s8 [7:0] $end
 $upscope $end
 $scope module mysrl $end
-$var wire 8 @ shift [7:0] $end
-$var wire 8 A src [7:0] $end
-$var reg 8 B by1 [7:0] $end
-$var reg 8 C by2 [7:0] $end
-$var reg 8 D by4 [7:0] $end
-$var reg 8 E dst [7:0] $end
+$var wire 8 > shift [7:0] $end
+$var wire 8 ? src [7:0] $end
+$var reg 8 @ by1 [7:0] $end
+$var reg 8 A by2 [7:0] $end
+$var reg 8 B by4 [7:0] $end
+$var reg 8 C dst [7:0] $end
 $upscope $end
 $upscope $end
 $upscope $end
 $enddefinitions $end
 #0
 $dumpvars
-bx E
-bx D
 bx C
 bx B
 bx A
@@ -70,12 +66,12 @@ bx =
 bx <
 bx ;
 bx :
-b110010 9
+bx 9
 bx 8
-x7
+b110010 7
 bx 6
-bx 5
-x4
+x5
+bx 4
 bx 3
 bx 2
 bx 1
@@ -99,10 +95,10 @@ $end
 #4
 1$
 #9
-b110111 9
+b110111 7
 b0 0
 b10000110 .
-07
+05
 1#
 #14
 b1 (
@@ -110,7 +106,7 @@ b1 (
 #19
 1"
 b100001100000000 !
-b100001100000000 5
+b100001100000000 3
 1#
 #24
 b10 (

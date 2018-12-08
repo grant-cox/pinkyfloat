@@ -86,6 +86,7 @@ endmodule
 `define FPU_ADDF_S2 56
 `define FPU_ADDF_S3 57
 `define FPU_ADDF_S4 58
+`define FPU_ADDF_S5 59
 
 //floating point unit
 //reg done : 1 when the floating point operation has completed
@@ -240,13 +241,25 @@ module fpu(input en, input clk, input `WORD op1, input `WORD op2, input [4:0] in
                 end
 
                 `FPU_ADDF_S3: begin
-                    {overflow, frac_w1} <= srl_out + {1'b1, larger[6:0]}; //smaller (shifted) mantissa is added to larger mantissa
+                    int <= srl_out + {1'b1, larger[6:0]};
+                    state <= `FPU_ADDF_S4;
+                    // {overflow, frac_w1} <= srl_out + {1'b1, larger[6:0]}; //smaller (shifted) mantissa is added to larger mantissa
                 end
 
                 `FPU_ADDF_S4: begin
                     //result <= {sign, (exp + overflow), frac_w1[]}
                     //normalize the mantissa if needed
+                    frac <= int << (d + 1);
+                    exp <= exp + int[8];
+                    state <= `FPU_ADDF_S5;
                 end
+
+                `FPU_ADDF_S5: begin
+                    result <= {sign, exp, frac};
+                    done <= 1;
+                end
+
+
 
             endcase
         end
