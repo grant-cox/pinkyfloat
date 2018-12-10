@@ -112,9 +112,11 @@ module fpu(input en, input clk, input `WORD op1, input `WORD op2, input [4:0] in
     reg `WORD int;
     //reg `WORD mant_mul;
     wire [4:0] d; //output of the count leading 0s module
+    wire [4:0] d_tmp;
     wire [7:0] srl_out; //output of barrel shifter module
 
     lead0s lead0(.d(d), .s(int));
+    lead0s lead1(.d(d_tmp), .s(tmp[15:0]));
     srl mysrl(.dst(srl_out), .src( {1'b1, smaller[6:0]} ), .shift(shift)); //module srl(dst, src, shift);
 
     reg [7:0] reciprocal_lookup [127:0];
@@ -239,24 +241,19 @@ module fpu(input en, input clk, input `WORD op1, input `WORD op2, input [4:0] in
                     done <= 1;
                 end
 
-                `FPU_ADDF_S2: begin
+                `FPU_ADDF_S2: begin //subtraction
                     //perform twos complement operation
-                    if (larger `SIGN) int <= ~{1'b1, larger `MANT} + 1; //concact implicit 1 -> 2's comp
-                    if (smaller `SIGN) int <= ~{1'b1, smaller `MANT} + 1;
-                    
-                    state <= `FPU_ADDF_S3;
+                    tmp <= { 1'b1, larger `MANT } - srl_out ; //subtract the bastards
+                    state <= `FPU_ADDF_S4;
                 end
 
-                `FPU_ADDF_S3: begin
+                `FPU_ADDF_S3: begin //addition
                     int <= srl_out + {1'b1, larger[6:0]};
                     state <= `FPU_ADDF_S4;
                     #1 $display("FPU_ADDF_S3: int = %b + %b = %b", srl_out, {1'b1, larger[6:0]}, int);
-                    // {overflow, frac_w1} <= srl_out + {1'b1, larger[6:0]}; //smaller (shifted) mantissa is added to larger mantissa
                 end
 
                 `FPU_ADDF_S4: begin
-                    //result <= {sign, (exp + overflow), frac_w1[]}
-                    //normalize the mantissa if needed
                     //int <= int << (d + 1); //16 bit leading zero counter -- we are passing 8 bits to it, remove useless top 7
                     if(int[8]) begin        // mantissa overflow case
                         $display("mantissa overflow.");
@@ -266,6 +263,11 @@ module fpu(input en, input clk, input `WORD op1, input `WORD op2, input [4:0] in
                     else if(int[7]) begin //non overflow case
                         $display("no mantissa overflow.");
                         frac <= int[6:0];
+                    end
+                    
+                    if(d_tmp) begin // if there are leading zeros on tmp after subtraction
+                        frac <= tmp << d_tmp-8; //there are 8 leading 0's gauranteed on tmp\
+                        exp <= exp - d_tmp-8;
                     end
                     state <= `FPU_ADDF_S5;
                 end

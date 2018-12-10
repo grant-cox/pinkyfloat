@@ -1,7 +1,7 @@
 # Fdb version 3
-["pdflatex"] 1544283351 "/home/gc/git/pinkyfloat/report/report.tex" "report.pdf" "report" 1544283351
+["pdflatex"] 1544411949 "/home/gc/git/pinkyfloat/report/report.tex" "report.pdf" "report" 1544411949
   "/etc/texmf/web2c/texmf.cnf" 1539622026 475 c0e671620eb5563b2130f56340a5fde8 ""
-  "/home/gc/git/pinkyfloat/report/report.tex" 1544283351 1446 12eed169fa84defb1b2316ab52d1869a ""
+  "/home/gc/git/pinkyfloat/report/report.tex" 1544411949 4208 963b3185dcbd155d3fed359f1495e82d ""
   "/usr/share/texlive/texmf-dist/fonts/enc/dvips/base/8r.enc" 1480098666 4850 80dc9bab7f31fb78a000ccfed0e27cab ""
   "/usr/share/texlive/texmf-dist/fonts/map/fontname/texfonts.map" 1511824771 3332 103109f5612ad95229751940c61aada0 ""
   "/usr/share/texlive/texmf-dist/fonts/tfm/adobe/times/ptmb7t.tfm" 1480098689 2172 fd0c924230362ff848a33632ed45dc23 ""
@@ -66,9 +66,9 @@
   "/var/lib/texmf/fonts/map/pdftex/updmap/pdftex.map" 1539638401 164837 f472f40ab643c6b1fa7fff8b04d446df ""
   "/var/lib/texmf/web2c/pdftex/pdflatex.fmt" 1539638402 946915 32b79cfe20b29353f1d6bd1f12238f68 ""
   "IEEEtran.cls" 1544062397 288304 b67b6fc6c2abb39f9b461923f5199343 ""
-  "report.aux" 1544283351 723 5681a364b31df53e346bd57b2fb6d899 ""
-  "report.tex" 1544283351 1446 12eed169fa84defb1b2316ab52d1869a ""
+  "report.aux" 1544411949 723 5681a364b31df53e346bd57b2fb6d899 ""
+  "report.tex" 1544411949 4208 963b3185dcbd155d3fed359f1495e82d ""
   (generated)
   "report.log"
-  "report.pdf"
   "report.aux"
+  "report.pdf"
