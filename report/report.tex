@@ -73,12 +73,15 @@ phillip.williams1@uky.edu}
         \end{enumerate}
     
     \subsection{SUBF}
-        As stated above, ADDF works for positive plus positive and negative plus negative addition. This was extended for SUBF for the case of positive minus a negative and negative minus positive, because these can be translated to addition. When these cases are encountered, the instruction points to the approprate state of the ADDF instruction and continues operation in that state machine.     
+        As stated above, ADDF works for positive plus positive and negative plus negative addition. This was extended for SUBF for the case of positive minus a negative and negative minus positive, because these can be translated to addition. When these cases are encountered, the instruction points to the appropriate state of the ADDF instruction and continues operation in that state machine.     
 
 \section{Issues}
-    FTOI, ITOF, MULF, and RECF work as expected for all positive and negative numbers. ADDF works with two positive or two negative numbers. Our issues arose when working on addition with numbers of opposite signs. There is a problem with with the twos complement operation of the mantissa. It was unclear how an overflow in the mantissa addition effected the result. Should the overflow be ignored, or should some normalization process occur after the addition? This was unclear for the \textit{general} case. We were able to compute the result for some, but not all cases, particularly when there was mantissa overflow. 
+    FTOI, ITOF, MULF, and RECF work as expected  for all positive and negative numbers. ADDF works with two positive or two negative numbers. Our issues arose when working on addition with numbers of opposite signs. There is a problem with with the twos complement operation of the mantissa. It was unclear how an overflow in the mantissa addition effected the result. Should the overflow be ignored, or should some normalization process occur after the addition? This was unclear for the \textit{general} case. We were able to compute the result for some, but not all cases, particularly when there was mantissa overflow. 
 
     Our group ran out of time to fully implement the SUBF operation. Again, this was hindered by a lack of understanding of how the implicit 1 and potential mantissa addition overflow affected twos complement result. 
     
     Our group also failed to resolve timing issues when running the floating point module with the PinKY processor. There was difficulty understanding how to monitor the "done" signal from the FPU. The processor's interlock trigger would be driven with x's under all implementations that we tried. Even though the FPU would finish the operation, the CPU was stuck in a loop.
+
+\section{Notes on fputmp.v}
+    fputmp.v contains the floating point implementation. The testbench module has the registers clearly marked for calling the fpu with the instruction and operators. It initializes a single instance of the fpu and processes the instruction requested.
 \end{document}
