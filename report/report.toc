@@ -1,0 +1,8 @@
+\contentsline {section}{\numberline {I}Approach}{1}
+\contentsline {subsection}{\numberline {\unhbox \voidb@x \hbox {I-A}}FTOI}{1}
+\contentsline {subsection}{\numberline {\unhbox \voidb@x \hbox {I-B}}ITOF}{1}
+\contentsline {subsection}{\numberline {\unhbox \voidb@x \hbox {I-C}}MULF}{2}
+\contentsline {subsection}{\numberline {\unhbox \voidb@x \hbox {I-D}}RECF}{2}
+\contentsline {subsection}{\numberline {\unhbox \voidb@x \hbox {I-E}}ADDF}{2}
+\contentsline {subsection}{\numberline {\unhbox \voidb@x \hbox {I-F}}SUBF}{2}
+\contentsline {section}{\numberline {II}Issues}{2}
