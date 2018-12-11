@@ -289,9 +289,9 @@ module testbench;
     integer counter = 0;
     wire `DATA result;
     wire done;
-    reg [4:0] instr = `OPADDF;
+    reg [4:0] instr = `OPITOF;
     reg `DATA rd = 16'hc179;
-    reg `DATA rn = 16'h41a3; 
+    reg `DATA rn = 16'h0001; 
     reg en;
     fpu myfpu(.en(en), .clk(clk), .op1(rd), .op2(rn), .instr(instr), .result(result), .done(done));
 
