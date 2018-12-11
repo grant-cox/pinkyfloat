@@ -177,7 +177,32 @@ module fpu(input en, input clk, input `WORD op1, input `WORD op2, input [4:0] in
                             frac <= reciprocal_lookup[op2 `MANT];
                             state <= `FPU_RECF_S2;
                         end
-                        `OPSUBF: begin end
+                        `OPSUBF: begin
+                            if((op1 `SIGN == 0 && op2 `SIGN == 1)) begin
+                                sign <= op1 `SIGN;
+                                state <= `FPU_ADDF_S3;
+                            end else if ((op1 `SIGN == 1) && (op2 `SIGN == 0)) begin
+                                sign <= op1 `SIGN;
+                                state <= `FPU_ADDF_S3;
+                            end
+
+                            if(op1 `EXP > op2 `EXP) begin //op2 exponent will be adjusted to match op1
+                                shift <= op1 `EXP - op2 `EXP; //determine the difference between the two exponents
+                                larger <= op1;
+                                smaller <= op2;
+                                exp <= op1 `EXP;
+                            end else if(op1 `EXP < op2 `EXP) begin //op1 exponent will be adjusted to match op2
+                                shift <= op2 `EXP - op1 `EXP; //determine the difference between the two exponents
+                                larger <= op2;
+                                smaller <= op1;
+                                exp <= op2 `EXP;
+                            end else begin
+                                shift <= 0;
+                                larger <= op1;
+                                smaller <= op2;
+                                exp <= op1 `EXP;
+                            end
+                         end
                         `OPADDF: begin
                             if((op1 `SIGN == op2 `SIGN)) begin //pos pos and neg neg
                                 sign <= op1 `SIGN; //result will be positive
@@ -289,9 +314,9 @@ module testbench;
     integer counter = 0;
     wire `DATA result;
     wire done;
-    reg [4:0] instr = `OPITOF;
-    reg `DATA rd = 16'hc179;
-    reg `DATA rn = 16'h0001; 
+    reg [4:0] instr = `OPSUBF;  //For testing, place the instruction you wish to test here
+    reg `DATA rd = 16'hc248;    //For testing, place the Rd hex value here
+    reg `DATA rn = 16'h4124;    //For testing, place the Rn hex value here
     reg en;
     fpu myfpu(.en(en), .clk(clk), .op1(rd), .op2(rn), .instr(instr), .result(result), .done(done));
 
